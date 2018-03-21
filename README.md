@@ -6,12 +6,14 @@ Credit to [Tony Wilk](https://www.codeproject.com/Members/tonywilk)
 Orginal publish [jWrite-a-really-simple-JSON-writer-in-C](https://www.codeproject.com/Articles/887604/jWrite-a-really-simple-JSON-writer-in-C)
  
 ## Introduction
-jWrite is a simple way of writing JSON to a char buffer in C, directly from native variables. It manages the output buffer so you don't overrun, it handles all the fiddly quotes, brackets and commas and reports where you have tried to create invalid JSON. There is now a C++ version with demo sketch for Arduino.
+jWrite is a simple way of writing JSON to a char buffer in C, directly from native variables. It manages the output buffer so you don't overrun, it handles all the fiddly quotes, brackets and commas and reports where you have tried to create invalid JSON.
+
+There is now a C++ version with demo sketch for Arduino. [jWriteCpp](https://github.com/jonaskgandersson/jWriteCpp)
 
 You can, of course, write json to a string with sprintf()... but this is miles better.
 
 ## Background
-This is a companion set of functions to "jRead an in-place JSON element reader" (http://www.codeproject.com/Articles/885389/jRead-an-in-place-JSON-element-reader).
+This is a companione set of functions to "jRead an in-place JSON element reader" [jRead](https://github.com/jonaskgandersson/jRead).
 
 The same basic design principles apply: it should be in straight C, have little or no memory overhead, execute fast and be simple to use. It is intended for use in embedded projects where using some nice and big C++ structured solution is just not appropriate.
 
