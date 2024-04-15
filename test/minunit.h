@@ -18,7 +18,7 @@ extern "C" {
 #define COLOR_GREEN "\x1b[32m"
 #define COLOR_RESET "\x1b[0m"
 
-#define MU_MESSAGE_LENGTH 128
+#define MU_MESSAGE_LENGTH 256
 static char error_message[MU_MESSAGE_LENGTH];
 
 static int tests_run = 0;
