@@ -30,7 +30,7 @@ static int tests_failed = 0;
     char *message = test();                                                    \
     tests_run++;                                                               \
     if (message) {                                                             \
-      printf(COLOR_RED "FAILED " #test "\n\t%s" COLOR_RESET, message);         \
+      printf(COLOR_RED "FAILED " #test "\n\t%s\n" COLOR_RESET, message);       \
       tests_failed++;                                                          \
     } else {                                                                   \
       printf(COLOR_GREEN "PASSED " COLOR_RESET #test "\n");                    \
