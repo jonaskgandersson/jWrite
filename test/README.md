@@ -12,8 +12,8 @@ Define test by using MU_TEST(test_name)
 
 Run test by using MU_RUN_TEST(test_name)
 
-Use assertion macro for test
-This will set failed count and print result of test, assertions will end current
+Use assertion macro for test.
+This will set failed count and print result of test, assertions will end current.
 test but not all tests.
 
 
@@ -55,18 +55,31 @@ int main() {
   return MU_RESULT != 0;
 }
 ```
-Compile and run the test
+
+## Makefile
+There is an simple Makefile to run tests with gcc, you can of course use your
+own toolchain to run the test on a specific platform.
 ```sh
-test % gcc -std=c89 -Wextra -Wall test.c ../jWrite.c -o test.out && ./test.out
+make test
 PASSED test_obj_open_compact
 +-------------------------------------+
 | Tests run:      1                   |
 | Tests failed:   0                   |
 | Result:         PASSED              |
 +-------------------------------------+
-test % echo $?
+echo $?
 0
 ```
+To create test coverage files with gcc and gcov run make test_cov
+``` sh
+make test_cov
+File '.../jWrite.c'
+Lines executed:93.95% of 248
+Creating 'jWrite.c.gcov'
+```
+This will output .c.gcov, .gcda, .gcno files in the test directory.
+Tools like gcovr can be used to visualize and analyze coverage.
+
 
 ## MinUnit
 MinUnit is based on John Brewer implementation, https://jera.com/techinfo/jtns/jtn002.
