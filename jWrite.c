@@ -1,21 +1,19 @@
-//
-// jWrite.c		version 1v2
-//
-// A *really* simple JSON writer in C
-//
-// see: jWrite.h for info
-//
-// TonyWilk, Mar 2015
-//
-#define _CRT_SECURE_NO_WARNINGS // stop complaining about deprecated functions
+/*
+ * jWrite.c
+ *
+ * A *really* simple JSON writer in C
+ *
+ * TonyWilk, Mar 2015
+ */
 
-#include <stddef.h>
+/* stop complaining about deprecated functions */
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
-#include <string.h> // memset()
+#include <string.h> /* memset() */
 
 #include "jWrite.h"
 
-// #include <stdint.h>			// definintion of uint32_t, int32_t
 #ifndef _UINT32_T_DECLARED
 typedef unsigned int uint32_t;
 #endif
@@ -23,31 +21,33 @@ typedef unsigned int uint32_t;
 typedef int int32_t;
 #endif
 
-// the jWrite functions take the above jWriteControl structure pointer
-// to maintain state while writing a JSON string.
-//
-// You can opt to use a single global instance of a jWriteControl structure
-// which simplifies the function parameters or to supply your own structure
-//
+/* the jWrite functions take the above jWriteControl structure pointer
+ * to maintain state while writing a JSON string.
+ *
+ * You can opt to use a single global instance of a jWriteControl structure
+ * which simplifies the function parameters or to supply your own structure
+ */
 #ifdef JW_GLOBAL_CONTROL_STRUCT
-struct jWriteControl g_jWriteControl; // global control struct
-#define JWC_DECL                      // function parameter decl is empty
+struct jWriteControl g_jWriteControl; /* global control struct */
+#define JWC_DECL                      /* function parameter decl is empty */
 #define JWC_DECL0
-#define JWC(x) g_jWriteControl.x // functions access global
-#define JWC_PARAM                // pointer to struct is empty
+#define JWC(x) g_jWriteControl.x /* functions access global */
+#define JWC_PARAM                /* pointer to struct is empty */
 #define JWC_PARAM0
 #else
 #define JWC_DECL                                                               \
-  struct jWriteControl *jwc, // function parameter is ptr to control struct
-#define JWC_DECL0 struct jWriteControl *jwc // function parameter, no params
-#define JWC(x) jwc->x                       // functions use pointer
-#define JWC_PARAM jwc,                      // pointer to stuct
-#define JWC_PARAM0 jwc                      // pointer to stuct, no params
+  struct jWriteControl *jwc, /* function parameter is ptr to control struct */
+#define JWC_DECL0                                                              \
+  struct jWriteControl *jwc /* function parameter, no params                   \
+                             */
+#define JWC(x) jwc->x       /* functions use pointer */
+#define JWC_PARAM jwc,      /* pointer to stuct */
+#define JWC_PARAM0 jwc      /* pointer to stuct, no params */
 #endif
 
-//------------------------------------------
-// Internal functions
-//
+/*------------------------------------------
+ * Internal functions
+ */
 void jwPutch(JWC_DECL char c);
 void jwPutstr(JWC_DECL char *str);
 void jwPutraw(JWC_DECL char *str);
@@ -57,15 +57,15 @@ void jwPretty(JWC_DECL0);
 enum jwNodeType jwPop(JWC_DECL0);
 void jwPush(JWC_DECL enum jwNodeType nodeType);
 
-//------------------------------------------
-// jwOpen
-// - open writing of JSON starting with rootType = JW_OBJECT or JW_ARRAY
-// - initialise with user string buffer of length buflen
-// - isPretty=JW_PRETTY adds \n and spaces to prettify output (else JW_COMPACT)
-//
+/*------------------------------------------
+ * jwOpen
+ * - open writing of JSON starting with rootType = JW_OBJECT or JW_ARRAY
+ * - initialise with user string buffer of length buflen
+ * - isPretty=JW_PRETTY adds \n and spaces to prettify output (else JW_COMPACT)
+ */
 void jwOpen(JWC_DECL char *buffer, unsigned int buflen,
             enum jwNodeType rootType, int isPretty) {
-  memset(buffer, 0, buflen); // zap the whole destination buffer
+  memset(buffer, 0, buflen); /* zap the whole destination buffer */
   JWC(buffer) = buffer;
   JWC(buflen) = buflen;
   JWC(bufp) = buffer;
@@ -78,11 +78,11 @@ void jwOpen(JWC_DECL char *buffer, unsigned int buflen,
   jwPutch(JWC_PARAM(rootType == JW_OBJECT) ? '{' : '[');
 }
 
-//------------------------------------------
-// jwClose
-// - closes the root JSON object started by jwOpen()
-// - returns error code
-//
+/*------------------------------------------
+ * jwClose
+ * - closes the root JSON object started by jwOpen()
+ * - returns error code
+ */
 int jwClose(JWC_DECL0) {
   if (JWC(error) == JWRITE_OK) {
     if (JWC(stackpos) == 0) {
@@ -91,16 +91,17 @@ int jwClose(JWC_DECL0) {
         jwPutch(JWC_PARAM '\n');
       jwPutch(JWC_PARAM(node == JW_OBJECT) ? '}' : ']');
     } else {
-      JWC(error) = JWRITE_NEST_ERROR; // nesting error, not all objects closed
-                                      // when jwClose() called
+      JWC(error) =
+          JWRITE_NEST_ERROR; /* nesting error, not all objects closed */
+                             /* when jwClose() called */
     }
   }
   return JWC(error);
 }
 
-//------------------------------------------
-// End the current array/object
-//
+/*------------------------------------------
+ * End the current array/object
+ */
 int jwEnd(JWC_DECL0) {
   if (JWC(error) == JWRITE_OK) {
     enum jwNodeType node;
@@ -113,26 +114,26 @@ int jwEnd(JWC_DECL0) {
   return JWC(error);
 }
 
-//------------------------------------------
-// jwErrorPos
-// - Returns position of error: the nth call to a jWrite function
-//
+/*------------------------------------------
+ * jwErrorPos
+ * - Returns position of error: the nth call to a jWrite function
+ */
 int jwErrorPos(JWC_DECL0) { return JWC(callNo); }
 
-//------------------------------------------
-// Object insert functions
-//
+/*------------------------------------------
+ * Object insert functions
+ */
 int _jwObj(JWC_DECL char *key);
 
-// put raw string to object (i.e. contents of rawtext without quotes)
-//
+/* put raw string to object (i.e. contents of rawtext without quotes)
+ */
 void jwObj_raw(JWC_DECL char *key, char *rawtext) {
   if (_jwObj(JWC_PARAM key) == JWRITE_OK)
     jwPutraw(JWC_PARAM rawtext);
 }
 
-// put "quoted" string to object
-//
+/* put "quoted" string to object
+ */
 void jwObj_string(JWC_DECL char *key, char *value) {
   if (_jwObj(JWC_PARAM key) == JWRITE_OK)
     jwPutstr(JWC_PARAM value);
@@ -154,8 +155,8 @@ void jwObj_bool(JWC_DECL char *key, int oneOrZero) {
 
 void jwObj_null(JWC_DECL char *key) { jwObj_raw(JWC_PARAM key, "null"); }
 
-// put Object in Object
-//
+/* put Object in Object
+ */
 void jwObj_object(JWC_DECL char *key) {
   if (_jwObj(JWC_PARAM key) == JWRITE_OK) {
     jwPutch(JWC_PARAM '{');
@@ -163,8 +164,8 @@ void jwObj_object(JWC_DECL char *key) {
   }
 }
 
-// put Array in Object
-//
+/* put Array in Object
+ */
 void jwObj_array(JWC_DECL char *key) {
   if (_jwObj(JWC_PARAM key) == JWRITE_OK) {
     jwPutch(JWC_PARAM '[');
@@ -172,20 +173,20 @@ void jwObj_array(JWC_DECL char *key) {
   }
 }
 
-//------------------------------------------
-// Array insert functions
-//
+/*------------------------------------------
+ * Array insert functions
+ */
 int _jwArr(JWC_DECL0);
 
-// put raw string to array (i.e. contents of rawtext without quotes)
-//
+/* put raw string to array (i.e. contents of rawtext without quotes)
+ */
 void jwArr_raw(JWC_DECL char *rawtext) {
   if (_jwArr(JWC_PARAM0) == JWRITE_OK)
     jwPutraw(JWC_PARAM rawtext);
 }
 
-// put "quoted" string to array
-//
+/* put "quoted" string to array
+ */
 void jwArr_string(JWC_DECL char *value) {
   if (_jwArr(JWC_PARAM0) == JWRITE_OK)
     jwPutstr(JWC_PARAM value);
@@ -221,10 +222,10 @@ void jwArr_array(JWC_DECL0) {
   }
 }
 
-//------------------------------------------
-// jwErrorToString
-// - returns string describing error code
-//
+/*------------------------------------------
+ * jwErrorToString
+ * - returns string describing error code
+ */
 char *jwErrorToString(int err) {
   switch (err) {
   case JWRITE_OK:
@@ -245,9 +246,9 @@ char *jwErrorToString(int err) {
   return "Unknown error";
 }
 
-//============================================================================
-// Internal functions
-//
+/*============================================================================
+ * Internal functions
+ */
 void jwPretty(JWC_DECL0) {
   int i;
   if (JWC(isPretty)) {
@@ -257,11 +258,12 @@ void jwPretty(JWC_DECL0) {
   }
 }
 
-// Push / Pop node stack
-//
+/* Push / Pop node stack
+ */
 void jwPush(JWC_DECL enum jwNodeType nodeType) {
   if ((JWC(stackpos) + 1) >= JWRITE_STACK_DEPTH)
-    JWC(error) = JWRITE_STACK_FULL; // array/object nesting > JWRITE_STACK_DEPTH
+    JWC(error) =
+        JWRITE_STACK_FULL; /* array/object nesting > JWRITE_STACK_DEPTH */
   else {
     JWC(nodeStack[++JWC(stackpos)]).nodeType = nodeType;
     JWC(nodeStack[JWC(stackpos)]).elementNo = 0;
@@ -271,7 +273,8 @@ void jwPush(JWC_DECL enum jwNodeType nodeType) {
 enum jwNodeType jwPop(JWC_DECL0) {
   enum jwNodeType retval = JWC(nodeStack[JWC(stackpos)]).nodeType;
   if (JWC(stackpos) == 0)
-    JWC(error) = JWRITE_STACK_EMPTY; // stack underflow error (too many 'end's)
+    JWC(error) =
+        JWRITE_STACK_EMPTY; /* stack underflow error (too many 'end's) */
   else
     JWC(stackpos)--;
   return retval;
@@ -285,8 +288,8 @@ void jwPutch(JWC_DECL char c) {
   }
 }
 
-// put string enclosed in quotes
-//
+/* put string enclosed in quotes
+ */
 void jwPutstr(JWC_DECL char *str) {
   jwPutch(JWC_PARAM '\"');
   while (*str != '\0')
@@ -294,25 +297,25 @@ void jwPutstr(JWC_DECL char *str) {
   jwPutch(JWC_PARAM '\"');
 }
 
-// put raw string
-//
+/* put raw string
+ */
 void jwPutraw(JWC_DECL char *str) {
   while (*str != '\0')
     jwPutch(JWC_PARAM * str++);
 }
 
-// *common Object function*
-// - checks error
-// - checks current node is OBJECT
-// - adds comma if reqd
-// - adds "key" :
-//
+/* *common Object function*
+ * - checks error
+ * - checks current node is OBJECT
+ * - adds comma if reqd
+ * - adds "key" :
+ */
 int _jwObj(JWC_DECL char *key) {
   if (JWC(error) == JWRITE_OK) {
     JWC(callNo)++;
     if (JWC(nodeStack)[JWC(stackpos)].nodeType != JW_OBJECT)
       JWC(error) =
-          JWRITE_NOT_OBJECT; // tried to write Object key/value into Array
+          JWRITE_NOT_OBJECT; /* tried to write Object key/value into Array */
     else if (JWC(nodeStack)[JWC(stackpos)].elementNo++ > 0)
       jwPutch(JWC_PARAM ',');
     jwPretty(JWC_PARAM0);
@@ -324,16 +327,17 @@ int _jwObj(JWC_DECL char *key) {
   return JWC(error);
 }
 
-// *common Array function*
-// - checks error
-// - checks current node is ARRAY
-// - adds comma if reqd
-//
+/* *common Array function*
+ * - checks error
+ * - checks current node is ARRAY
+ * - adds comma if reqd
+ */
 int _jwArr(JWC_DECL0) {
   if (JWC(error) == JWRITE_OK) {
     JWC(callNo)++;
     if (JWC(nodeStack)[JWC(stackpos)].nodeType != JW_ARRAY)
-      JWC(error) = JWRITE_NOT_ARRAY; // tried to write array value into Object
+      JWC(error) =
+          JWRITE_NOT_ARRAY; /* tried to write array value into Object */
     else if (JWC(nodeStack)[JWC(stackpos)].elementNo++ > 0)
       jwPutch(JWC_PARAM ',');
     jwPretty(JWC_PARAM0);
@@ -341,15 +345,15 @@ int _jwArr(JWC_DECL0) {
   return JWC(error);
 }
 
-//=================================================================
-//
-// modp value-to-string functions
-// - modified for C89
-//
-// We use these functions as they are a lot faster than sprintf()
-//
-// Origin of these routines:
-/*
+/*=================================================================
+ *
+ * modp value-to-string functions
+ * - modified for C89
+ *
+ * We use these functions as they are a lot faster than sprintf()
+ *
+ * Origin of these routines:
+ *
  * <pre>
  * Copyright &copy; 2007, Nick Galbreath -- nickg [at] modp [dot] com
  * All rights reserved.
@@ -371,9 +375,9 @@ static void strreverse(char *begin, char *end) {
  */
 void modp_itoa10(int32_t value, char *str) {
   char *wstr = str;
-  // Take care of sign
+  /* Take care of sign */
   unsigned int uvalue = (value < 0) ? -value : value;
-  // Conversion. Number is reversed.
+  /* Conversion. Number is reversed. */
   do
     *wstr++ = (char)(48 + (uvalue % 10));
   while (uvalue /= 10);
@@ -381,7 +385,7 @@ void modp_itoa10(int32_t value, char *str) {
     *wstr++ = '-';
   *wstr = '\0';
 
-  // Reverse string
+  /* Reverse string */
   strreverse(str, wstr - 1);
 }
 
@@ -485,33 +489,33 @@ void modp_dtoa2(double value, char *str, int prec) {
       ++whole;
     }
 
-    // vvvvvvvvvvvvvvvvvvv  Diff from modp_dto2
+    /* vvvvvvvvvvvvvvvvvvv  Diff from modp_dto2 */
   } else if (frac) {
     count = prec;
-    // now do fractional part, as an unsigned number
-    // we know it is not 0 but we can have leading zeros, these
-    // should be removed
+    /* now do fractional part, as an unsigned number
+     we know it is not 0 but we can have leading zeros, these
+     should be removed */
     while (!(frac % 10)) {
       --count;
       frac /= 10;
     }
-    //^^^^^^^^^^^^^^^^^^^  Diff from modp_dto2
+    /*^^^^^^^^^^^^^^^^^^^  Diff from modp_dto2 */
 
-    // now do fractional part, as an unsigned number
+    /* now do fractional part, as an unsigned number */
     do {
       --count;
       *wstr++ = (char)(48 + (frac % 10));
     } while (frac /= 10);
-    // add extra 0s
+    /* add extra 0s */
     while (count-- > 0)
       *wstr++ = '0';
-    // add decimal
+    /* add decimal */
     *wstr++ = '.';
   }
 
-  // do whole part
-  // Take care of sign
-  // Conversion. Number is reversed.
+  /* do whole part
+   Take care of sign
+   Conversion. Number is reversed. */
   do
     *wstr++ = (char)(48 + (whole % 10));
   while (whole /= 10);
@@ -521,6 +525,5 @@ void modp_dtoa2(double value, char *str, int prec) {
   *wstr = '\0';
   strreverse(str, wstr - 1);
 }
-//=================================================================
 
 /* end of jWrite.c */
