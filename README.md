@@ -24,33 +24,36 @@ For the programmer, it is pointless to make configuration of a JSON writer more 
 jWrite attempts a happy medium in that it is simple and doesn't seem to do much - you just tell it what to write and it does it.
 
 ## Using the Code
-Jumping straight in:
-```c
-jwOpen( buffer, buflen, JW_OBJECT, JW_PRETTY );  // open root node as object
-jwObj_string( "key", "value" );                  // writes "key":"value"
-jwObj_int( "int", 1 );                           // writes "int":1
-jwObj_array( "anArray");                         // start "anArray": [...] 
-    jwArr_int( 0 );                              // add a few integers to the array
-    jwArr_int( 1 );
-    jwArr_int( 2 );
-jwEnd();                                         // end the array
-err= jwClose();                                  // close root object - done
-```
 
-which results in:
+Jumping straight in:
+
+**Basic object**
 ```c
-{
-    "key": "value",
-    "int": 1,
-    "anArray": [
-        0,
-        1,
-        2
-    ]
+int main() {
+  char json[1024];
+  jwOpen( json, 1024, JW_OBJECT, JW_PRETTY );  // open root node as object
+    jwObj_string( "key", "value" );            // writes "key":"value"
+    jwObj_int( "int", 1 );                     // writes "int":1
+    jwObj_array( "anArray");                   // start "anArray": [...] 
+      jwArr_int( 0 );                          // add a few integers to the array
+      jwArr_int( 1 );
+      jwArr_int( 2 );
+    jwEnd();                                   // end the array
+  err= jwClose();                              // close root object - done
 }
 ```
+The json is build up from multiple write calls:
+![jWrite example gif](./examples/jWrite_basic.gif)
+
+**Objects in array**
+
+![jWrite nested example gif](./examples/jWrite_nested.gif)
 
 The output is prettyfied (it's an option) and has all the { } [ ] , : " characters in the right place.
+
+There are longer examples in the examples directory.
+
+### Error handling
 
 Although this looks very straightforward, not a lot different than a load of sprintf()s you may say, but jWrite does a few really useful things: it helps you make the output valid JSON.
 
@@ -67,6 +70,7 @@ Since the JSON root is an object, we must insert "key":"value" pairs, so the cal
 
 When writing a large JSON file, it may be difficult to figure out where you went wrong... in this case, jWrite helps out by giving you the number of the function which caused the error and leaving the partially-constructed JSON in your buffer (with '\0' termianator). In the above case, jwErrorPos() would return 4 because the 4th function in this sequence caused the error (the jwOpen() call is number 1)
 
+### "Advanced" usage
 Since jWrite handles the JSON formatting, it's easy to create the output programatically (rather than in-line as above) like:
 ```c
 jwOpen( buffer, buflen, JWOBJECT, JW_COMPACT );    // outer JSON is an object, compact format
@@ -81,8 +85,6 @@ err= jwClose();
 In this example, myArrayLen could be anything (0,1,2...) and jWrite handles the output and puts the array value separator commas in the right places.
 
 Any valid JSON sequence can be created with value types of Object, Array, int, double, bool, null and string. You can also add your own stringified values by inserting them raw, e.g., jwObj_raw( "key", rawtext ).
-
-There are longer examples in main.c and some more information in jWrite.h.
 
 ## Points of Interest
 The Internal Control Structure
