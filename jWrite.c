@@ -281,7 +281,8 @@ enum jwNodeType jwPop(JWC_DECL0) {
 }
 
 void jwPutch(JWC_DECL char c) {
-  if ((unsigned int)(JWC(bufp) - JWC(buffer)) >= JWC(buflen)) {
+  unsigned int current_length = JWC(bufp) - JWC(buffer) + 1;
+  if (current_length >= JWC(buflen)) {
     JWC(error) = JWRITE_BUF_FULL;
   } else {
     *JWC(bufp)++ = c;
