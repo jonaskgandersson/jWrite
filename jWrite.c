@@ -104,12 +104,24 @@ int jwClose(JWC_DECL0) {
  */
 int jwEnd(JWC_DECL0) {
   if (JWC(error) == JWRITE_OK) {
+    JWC(callNo)++;
     enum jwNodeType node;
     int lastElemNo = JWC(nodeStack)[JWC(stackpos)].elementNo;
     node = jwPop(JWC_PARAM0);
     if (lastElemNo > 0)
       jwPretty(JWC_PARAM0);
-    jwPutch(JWC_PARAM(node == JW_OBJECT) ? '}' : ']');
+
+    switch (node) {
+    case JW_OBJECT:
+      jwPutch(JWC_PARAM '}');
+      break;
+    case JW_ARRAY:
+      jwPutch(JWC_PARAM ']');
+      break;
+    case JW_VALUE:
+      JWC(error) = JWRITE_MISSING_VALUE;
+      break;
+    }
   }
   return JWC(error);
 }
@@ -123,104 +135,205 @@ int jwErrorPos(JWC_DECL0) { return JWC(callNo); }
 /*------------------------------------------
  * Object insert functions
  */
-int _jwObj(JWC_DECL char *key);
+int _jwArr(JWC_DECL0);
+
+/* Old API, wrapper for backward compatibility
+ */
+void jwObj_raw(JWC_DECL char *key, char *rawtext) {
+  jw_key(JWC_PARAM key);
+  jw_raw(JWC_PARAM rawtext);
+}
 
 /* put raw string to object (i.e. contents of rawtext without quotes)
  */
-void jwObj_raw(JWC_DECL char *key, char *rawtext) {
-  if (_jwObj(JWC_PARAM key) == JWRITE_OK)
-    jwPutraw(JWC_PARAM rawtext);
+void jw_raw(JWC_DECL char *rawtext) {
+  if (JWC(error) == JWRITE_OK) {
+    JWC(callNo)++;
+
+    switch (JWC(nodeStack)[JWC(stackpos)].nodeType) {
+
+    case JW_ARRAY:
+      if (_jwArr(JWC_PARAM0) == JWRITE_OK) {
+        jwPutraw(JWC_PARAM rawtext);
+      }
+      break;
+
+    case JW_VALUE:
+      jwPutraw(JWC_PARAM rawtext);
+      jwPop(JWC_PARAM0);
+      break;
+
+    case JW_OBJECT:
+      /* tried to write Object value without key */
+      JWC(error) = JWRITE_NOT_VALUE;
+      break;
+    }
+  }
 }
 
-/* put "quoted" string to object
+/* put "quoted" string to value
+ */
+void jw_string(JWC_DECL char *value) {
+  if (JWC(error) == JWRITE_OK) {
+    JWC(callNo)++;
+
+    switch (JWC(nodeStack)[JWC(stackpos)].nodeType) {
+
+    case JW_ARRAY:
+      if (_jwArr(JWC_PARAM0) == JWRITE_OK) {
+        jwPutstr(JWC_PARAM value);
+      }
+      break;
+
+    case JW_VALUE:
+      jwPutstr(JWC_PARAM value);
+      jwPop(JWC_PARAM0);
+      break;
+
+    case JW_OBJECT:
+      /* tried to write Object value without key */
+      JWC(error) = JWRITE_NOT_VALUE;
+      break;
+    }
+  }
+}
+
+/* Old API, wrapper for backward compatibility
  */
 void jwObj_string(JWC_DECL char *key, char *value) {
-  if (_jwObj(JWC_PARAM key) == JWRITE_OK)
-    jwPutstr(JWC_PARAM value);
+  jw_key(JWC_PARAM key);
+  jw_string(JWC_PARAM value);
 }
 
 void jwObj_int(JWC_DECL char *key, int value) {
+  jw_key(JWC_PARAM key);
+  jw_int(JWC_PARAM value);
+}
+
+void jw_int(JWC_DECL int value) {
   modp_itoa10(value, JWC(tmpbuf));
-  jwObj_raw(JWC_PARAM key, JWC(tmpbuf));
+  jw_raw(JWC_PARAM JWC(tmpbuf));
 }
 
 void jwObj_double(JWC_DECL char *key, double value) {
+  jw_key(JWC_PARAM key);
+  jw_double(JWC_PARAM value);
+}
+
+void jw_double(JWC_DECL double value) {
   modp_dtoa2(value, JWC(tmpbuf), 6);
-  jwObj_raw(JWC_PARAM key, JWC(tmpbuf));
+  jw_raw(JWC_PARAM JWC(tmpbuf));
 }
 
 void jwObj_bool(JWC_DECL char *key, int oneOrZero) {
-  jwObj_raw(JWC_PARAM key, (oneOrZero) ? "true" : "false");
+  jw_key(JWC_PARAM key);
+  jw_bool(JWC_PARAM oneOrZero);
 }
 
-void jwObj_null(JWC_DECL char *key) { jwObj_raw(JWC_PARAM key, "null"); }
+void jw_bool(JWC_DECL int oneOrZero) {
+  jw_raw(JWC_PARAM(oneOrZero) ? "true" : "false");
+}
+
+void jwObj_null(JWC_DECL char *key) {
+  jw_key(JWC_PARAM key);
+  jw_null(JWC_PARAM0);
+}
+
+void jw_null(JWC_DECL0) { jw_raw(JWC_PARAM "null"); }
 
 /* put Object in Object
  */
 void jwObj_object(JWC_DECL char *key) {
-  if (_jwObj(JWC_PARAM key) == JWRITE_OK) {
-    jwPutch(JWC_PARAM '{');
-    jwPush(JWC_PARAM JW_OBJECT);
+  jw_key(JWC_PARAM key);
+  jw_object(JWC_PARAM0);
+}
+
+/* put Object
+ */
+void jw_object(JWC_DECL0) {
+  if (JWC(error) == JWRITE_OK) {
+    JWC(callNo)++;
+
+    switch (JWC(nodeStack)[JWC(stackpos)].nodeType) {
+
+    case JW_ARRAY:
+      if (_jwArr(JWC_PARAM0) == JWRITE_OK) {
+        jwPutch(JWC_PARAM '{');
+        jwPush(JWC_PARAM JW_OBJECT);
+      }
+      break;
+
+    case JW_VALUE:
+      jwPop(JWC_PARAM0);
+      jwPutch(JWC_PARAM '{');
+      jwPush(JWC_PARAM JW_OBJECT);
+      break;
+
+    case JW_OBJECT:
+      /* tried to write Object value without key */
+      JWC(error) = JWRITE_NOT_VALUE;
+      break;
+    }
   }
 }
 
 /* put Array in Object
  */
 void jwObj_array(JWC_DECL char *key) {
-  if (_jwObj(JWC_PARAM key) == JWRITE_OK) {
-    jwPutch(JWC_PARAM '[');
-    jwPush(JWC_PARAM JW_ARRAY);
+  jw_key(JWC_PARAM key);
+  jw_array(JWC_PARAM0);
+}
+
+void jw_array(JWC_DECL0) {
+  if (JWC(error) == JWRITE_OK) {
+    JWC(callNo)++;
+
+    switch (JWC(nodeStack)[JWC(stackpos)].nodeType) {
+
+    case JW_ARRAY:
+      if (_jwArr(JWC_PARAM0) == JWRITE_OK) {
+        jwPutch(JWC_PARAM '[');
+        jwPush(JWC_PARAM JW_ARRAY);
+      }
+      break;
+
+    case JW_VALUE:
+      jwPop(JWC_PARAM0);
+      jwPutch(JWC_PARAM '[');
+      jwPush(JWC_PARAM JW_ARRAY);
+      break;
+
+    case JW_OBJECT:
+      /* tried to write Object value without key */
+      JWC(error) = JWRITE_NOT_VALUE;
+      break;
+    }
   }
 }
 
 /*------------------------------------------
  * Array insert functions
  */
-int _jwArr(JWC_DECL0);
 
 /* put raw string to array (i.e. contents of rawtext without quotes)
  */
-void jwArr_raw(JWC_DECL char *rawtext) {
-  if (_jwArr(JWC_PARAM0) == JWRITE_OK)
-    jwPutraw(JWC_PARAM rawtext);
-}
+void jwArr_raw(JWC_DECL char *rawtext) { jw_raw(JWC_PARAM rawtext); }
 
 /* put "quoted" string to array
  */
-void jwArr_string(JWC_DECL char *value) {
-  if (_jwArr(JWC_PARAM0) == JWRITE_OK)
-    jwPutstr(JWC_PARAM value);
-}
+void jwArr_string(JWC_DECL char *value) { jw_string(JWC_PARAM value); }
 
-void jwArr_int(JWC_DECL int value) {
-  modp_itoa10(value, JWC(tmpbuf));
-  jwArr_raw(JWC_PARAM JWC(tmpbuf));
-}
+void jwArr_int(JWC_DECL int value) { jw_int(JWC_PARAM value); }
 
-void jwArr_double(JWC_DECL double value) {
-  modp_dtoa2(value, JWC(tmpbuf), 6);
-  jwArr_raw(JWC_PARAM JWC(tmpbuf));
-}
+void jwArr_double(JWC_DECL double value) { jw_double(JWC_PARAM value); }
 
-void jwArr_bool(JWC_DECL int oneOrZero) {
-  jwArr_raw(JWC_PARAM(oneOrZero) ? "true" : "false");
-}
+void jwArr_bool(JWC_DECL int oneOrZero) { jw_bool(JWC_PARAM oneOrZero); }
 
-void jwArr_null(JWC_DECL0) { jwArr_raw(JWC_PARAM "null"); }
+void jwArr_null(JWC_DECL0) { jw_null(JWC_PARAM0); }
 
-void jwArr_object(JWC_DECL0) {
-  if (_jwArr(JWC_PARAM0) == JWRITE_OK) {
-    jwPutch(JWC_PARAM '{');
-    jwPush(JWC_PARAM JW_OBJECT);
-  }
-}
+void jwArr_object(JWC_DECL0) { jw_object(JWC_PARAM0); }
 
-void jwArr_array(JWC_DECL0) {
-  if (_jwArr(JWC_PARAM0) == JWRITE_OK) {
-    jwPutch(JWC_PARAM '[');
-    jwPush(JWC_PARAM JW_ARRAY);
-  }
-}
+void jwArr_array(JWC_DECL0) { jw_array(JWC_PARAM0); }
 
 /*------------------------------------------
  * jwErrorToString
@@ -235,13 +348,17 @@ char *jwErrorToString(int err) {
   case JWRITE_NOT_ARRAY:
     return "tried to write Array value into Object";
   case JWRITE_NOT_OBJECT:
-    return "tried to write Object key/value into Array";
+    return "tried to write key into no object";
   case JWRITE_STACK_FULL:
     return "array/object nesting > JWRITE_STACK_DEPTH";
   case JWRITE_STACK_EMPTY:
     return "stack underflow error (too many 'end's)";
   case JWRITE_NEST_ERROR:
     return "nesting error, not all objects closed when jwClose() called";
+  case JWRITE_NOT_VALUE:
+    return "tried to write value without key";
+  case JWRITE_MISSING_VALUE:
+    return "object missing value";
   }
   return "Unknown error";
 }
@@ -310,13 +427,13 @@ void jwPutraw(JWC_DECL char *str) {
  * - checks current node is OBJECT
  * - adds comma if reqd
  * - adds "key" :
+ * - sets node type to value
  */
-int _jwObj(JWC_DECL char *key) {
+int jw_key(JWC_DECL char *key) {
   if (JWC(error) == JWRITE_OK) {
     JWC(callNo)++;
     if (JWC(nodeStack)[JWC(stackpos)].nodeType != JW_OBJECT)
-      JWC(error) =
-          JWRITE_NOT_OBJECT; /* tried to write Object key/value into Array */
+      JWC(error) = JWRITE_NOT_OBJECT; /* tried to write Object key into Array */
     else if (JWC(nodeStack)[JWC(stackpos)].elementNo++ > 0)
       jwPutch(JWC_PARAM ',');
     jwPretty(JWC_PARAM0);
@@ -324,6 +441,7 @@ int _jwObj(JWC_DECL char *key) {
     jwPutch(JWC_PARAM ':');
     if (JWC(isPretty))
       jwPutch(JWC_PARAM ' ');
+    jwPush(JWC_PARAM JW_VALUE);
   }
   return JWC(error);
 }
@@ -335,7 +453,6 @@ int _jwObj(JWC_DECL char *key) {
  */
 int _jwArr(JWC_DECL0) {
   if (JWC(error) == JWRITE_OK) {
-    JWC(callNo)++;
     if (JWC(nodeStack)[JWC(stackpos)].nodeType != JW_ARRAY)
       JWC(error) =
           JWRITE_NOT_ARRAY; /* tried to write array value into Object */

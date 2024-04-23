@@ -66,6 +66,63 @@ MU_TEST(test_obj_open_length) {
   return 0;
 }
 
+MU_TEST(test_obj_key) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  jw_string("String");
+  int err = jwClose();
+
+  MU_ASSERT_EQ(JWRITE_OK, err);
+  MU_ASSERT_MATCH("{\"Key\":\"String\"}", json);
+  return 0;
+}
+
+MU_TEST(test_obj_key_no_value) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  int err = jwClose();
+
+  MU_ASSERT_MATCH("{\"Key\":", json);
+  MU_ASSERT_EQ(JWRITE_NEST_ERROR, err);
+  return 0;
+}
+
+MU_TEST(test_obj_key_end_no_value) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  jw_object();
+  jw_key("Key2");
+  jwEnd();
+  int err = jwClose();
+
+  MU_ASSERT_MATCH("{\"Key\":{\"Key2\":", json);
+  MU_ASSERT_EQ(JWRITE_MISSING_VALUE, err);
+  return 0;
+}
+
+MU_TEST(test_obj_key_key) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  jw_key("Key2");
+  int err = jwClose();
+
+  MU_ASSERT_MATCH("{\"Key\":\"Key2\":", json);
+  MU_ASSERT_EQ(JWRITE_NOT_OBJECT, err);
+  return 0;
+}
+
 /* TEST jwObj_string */
 MU_TEST(test_obj_string_compact) {
   unsigned int length = 128;
@@ -429,7 +486,7 @@ MU_TEST(test_obj_array_insert) {
   jwEnd();
   int err = jwClose();
 
-  MU_ASSERT_EQ(JWRITE_NOT_ARRAY, err);
+  MU_ASSERT_EQ(JWRITE_NOT_VALUE, err);
 
   int err_pos = jwErrorPos();
   MU_ASSERT_EQ(2, err_pos);
@@ -457,7 +514,7 @@ MU_TEST(test_obj_write_not_ok) {
   MU_ASSERT_EQ(JWRITE_STACK_EMPTY, err);
 
   int err_pos = jwErrorPos();
-  MU_ASSERT_EQ(1, err_pos);
+  MU_ASSERT_EQ(2, err_pos);
 
   return 0;
 }
@@ -482,7 +539,7 @@ MU_TEST(test_arr_write_not_ok) {
   MU_ASSERT_EQ(JWRITE_STACK_EMPTY, err);
 
   int err_pos = jwErrorPos();
-  MU_ASSERT_EQ(1, err_pos);
+  MU_ASSERT_EQ(2, err_pos);
 
   return 0;
 }
@@ -496,7 +553,7 @@ MU_TEST(test_error_to_string) {
   MU_ASSERT_MATCH("tried to write Array value into Object",
                   jwErrorToString(JWRITE_NOT_ARRAY));
 
-  MU_ASSERT_MATCH("tried to write Object key/value into Array",
+  MU_ASSERT_MATCH("tried to write key into no object",
                   jwErrorToString(JWRITE_NOT_OBJECT));
 
   MU_ASSERT_MATCH("array/object nesting > JWRITE_STACK_DEPTH",
@@ -507,6 +564,12 @@ MU_TEST(test_error_to_string) {
 
   MU_ASSERT_MATCH("nesting error, not all objects closed when jwClose() called",
                   jwErrorToString(JWRITE_NEST_ERROR));
+
+  MU_ASSERT_MATCH("tried to write value without key",
+                  jwErrorToString(JWRITE_NOT_VALUE));
+
+  MU_ASSERT_MATCH("object missing value",
+                  jwErrorToString(JWRITE_MISSING_VALUE));
 
   MU_ASSERT_MATCH("Unknown error", jwErrorToString(999));
 
@@ -606,6 +669,11 @@ static void all_tests() {
   MU_RUN_TEST(test_array_open_compact);
   MU_RUN_TEST(test_array_open_pretty);
   MU_RUN_TEST(test_obj_open_length);
+
+  MU_RUN_TEST(test_obj_key);
+  MU_RUN_TEST(test_obj_key_no_value);
+  MU_RUN_TEST(test_obj_key_end_no_value);
+  MU_RUN_TEST(test_obj_key_key);
 
   MU_RUN_TEST(test_obj_string_compact);
   MU_RUN_TEST(test_obj_string_pretty);

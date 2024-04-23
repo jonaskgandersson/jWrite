@@ -17,7 +17,7 @@
 #define JW_COMPACT 0 /* output string control for jwOpen() */
 #define JW_PRETTY 1  /* pretty adds \n and indentation */
 
-enum jwNodeType { JW_OBJECT = 1, JW_ARRAY };
+enum jwNodeType { JW_OBJECT = 1, JW_ARRAY, JW_VALUE };
 
 struct jwNodeStack {
   enum jwNodeType nodeType;
@@ -39,12 +39,14 @@ struct jWriteControl {
 
 /* Error Codes */
 #define JWRITE_OK 0
-#define JWRITE_BUF_FULL 1    /* output buffer full */
-#define JWRITE_NOT_ARRAY 2   /* tried to write Array value into Object */
-#define JWRITE_NOT_OBJECT 3  /* tried to write Object key/value into Array */
-#define JWRITE_STACK_FULL 4  /* array/object nesting > JWRITE_STACK_DEPTH */
-#define JWRITE_STACK_EMPTY 5 /* stack underflow error (too many 'end's) */
-#define JWRITE_NEST_ERROR 6  /* not all objects closed at jwClose()*/
+#define JWRITE_BUF_FULL 1      /* output buffer full */
+#define JWRITE_NOT_ARRAY 2     /* tried to write Array value into Object */
+#define JWRITE_NOT_OBJECT 3    /* tried to write Object key/value into Array */
+#define JWRITE_STACK_FULL 4    /* array/object nesting > JWRITE_STACK_DEPTH */
+#define JWRITE_STACK_EMPTY 5   /* stack underflow error (too many 'end's) */
+#define JWRITE_NEST_ERROR 6    /* not all objects closed at jwClose()*/
+#define JWRITE_NOT_VALUE 7     /* tried to write value without key */
+#define JWRITE_MISSING_VALUE 8 /* object missing value */
 
 /**
  * Get error description from error code
@@ -82,12 +84,20 @@ int jwClose();
 int jwErrorPos();
 
 /**
+ * Insert key: to object
+ *
+ * @param key name of key
+ */
+int jw_key(char *key);
+
+/**
  * Insert quoted string as key:"value" to object
  *
  * @param key name of key
  * @param value as string
  */
 void jwObj_string(char *key, char *value);
+void jw_string(char *value);
 
 /**
  * Insert number as key:value to object
@@ -96,6 +106,7 @@ void jwObj_string(char *key, char *value);
  * @param value as int
  */
 void jwObj_int(char *key, int value);
+void jw_int(int value);
 
 /**
  * Insert number as key:value to object.
@@ -105,6 +116,7 @@ void jwObj_int(char *key, int value);
  * @param value as double
  */
 void jwObj_double(char *key, double value);
+void jw_double(double value);
 
 /**
  * Insert boolen as key:false|true to object.
@@ -113,6 +125,7 @@ void jwObj_double(char *key, double value);
  * @param value as int, 0 = false, >0 = true
  */
 void jwObj_bool(char *key, int oneOrZero);
+void jw_bool(int oneOrZero);
 
 /**
  * Insert null as key:null to object.
@@ -120,6 +133,7 @@ void jwObj_bool(char *key, int oneOrZero);
  * @param key name of key
  */
 void jwObj_null(char *key);
+void jw_null();
 
 /**
  * Insert object as key:{ to object.
@@ -129,6 +143,7 @@ void jwObj_null(char *key);
  * @param key name of key
  */
 void jwObj_object(char *key);
+void jw_object();
 
 /**
  * Insert array as key:[ to object.
@@ -138,6 +153,7 @@ void jwObj_object(char *key);
  * @param key name of key
  */
 void jwObj_array(char *key);
+void jw_array();
 
 /**
  * Insert quoted string as "value" to array
@@ -203,6 +219,7 @@ int jwEnd();
  * @param rawtext as string
  */
 void jwObj_raw(char *key, char *rawtext);
+void jw_raw(char *rawtext);
 
 /**
  * Insert raw text to JSON as rawtext to array.
@@ -245,6 +262,14 @@ int jwClose(struct jWriteControl *jwc);
 int jwErrorPos(struct jWriteControl *jwc);
 
 /**
+ * Insert key: to object
+ *
+ * @param jwc control struct for json state
+ * @param key name of key
+ */
+int jw_key(struct jWriteControl *jwc, char *key);
+
+/**
  * Insert quoted string as key:"value" to object
  *
  * @param jwc control struct for json state
@@ -252,6 +277,7 @@ int jwErrorPos(struct jWriteControl *jwc);
  * @param value as string
  */
 void jwObj_string(struct jWriteControl *jwc, char *key, char *value);
+void jw_string(struct jWriteControl *jwc, char *value);
 
 /**
  * Insert number as key:value to object
@@ -261,6 +287,7 @@ void jwObj_string(struct jWriteControl *jwc, char *key, char *value);
  * @param value as int
  */
 void jwObj_int(struct jWriteControl *jwc, char *key, int value);
+void jw_int(struct jWriteControl *jwc, int value);
 
 /**
  * Insert number as key:value to object.
@@ -271,6 +298,7 @@ void jwObj_int(struct jWriteControl *jwc, char *key, int value);
  * @param value as double
  */
 void jwObj_double(struct jWriteControl *jwc, char *key, double value);
+void jw_double(struct jWriteControl *jwc, double value);
 
 /**
  * Insert boolen as key:false|true to object.
@@ -280,6 +308,7 @@ void jwObj_double(struct jWriteControl *jwc, char *key, double value);
  * @param value as int, 0 = false, >0 = true
  */
 void jwObj_bool(struct jWriteControl *jwc, char *key, int oneOrZero);
+void jw_bool(struct jWriteControl *jwc, int oneOrZero);
 
 /**
  * Insert null as key:null to object.
@@ -288,6 +317,7 @@ void jwObj_bool(struct jWriteControl *jwc, char *key, int oneOrZero);
  * @param key name of key
  */
 void jwObj_null(struct jWriteControl *jwc, char *key);
+void jw_null(struct jWriteControl *jwc);
 
 /**
  * Insert object as key:{ to object.
@@ -298,6 +328,7 @@ void jwObj_null(struct jWriteControl *jwc, char *key);
  * @param key name of key
  */
 void jwObj_object(struct jWriteControl *jwc, char *key);
+void jw_object(struct jWriteControl *jwc);
 
 /**
  * Insert array as key:[ to object.
@@ -308,6 +339,7 @@ void jwObj_object(struct jWriteControl *jwc, char *key);
  * @param key name of key
  */
 void jwObj_array(struct jWriteControl *jwc, char *key);
+void jw_array(struct jWriteControl *jwc);
 
 /**
  * Insert quoted string as "value" to array
@@ -386,6 +418,7 @@ int jwEnd(struct jWriteControl *jwc);
  * @param rawtext as string
  */
 void jwObj_raw(struct jWriteControl *jwc, char *key, char *rawtext);
+void jw_raw(struct jWriteControl *jwc, char *key);
 
 /**
  * Insert raw text to JSON as rawtext to array.
