@@ -17,23 +17,13 @@ struct Person {
  * Create custom helper function to write custom data.
  * This implementation is only for using global control struct.
  */
-void jwObj_person(struct jWriteControl *jwc, char *key, struct Person person) {
-  jwObj_object(jwc, key);
-  jwObj_string(jwc, "Name", person.name);
-  jwObj_int(jwc, "Age", person.age);
-  jwEnd(jwc);
+void jw_person(struct jWriteControl *jwc, struct Person person) {
 
-  return;
-}
-
-/* Person to json array
- * Create custom helper function to write custom data.
- * This implementation is only for using global control struct.
- */
-void jwArr_person(struct jWriteControl *jwc, struct Person person) {
-  jwArr_object(jwc);
-  jwObj_string(jwc, "Name", person.name);
-  jwObj_int(jwc, "Age", person.age);
+  jw_object(jwc);
+  jw_key(jwc, "Name");
+  jw_string(jwc, person.name);
+  jw_key(jwc, "Age");
+  jw_int(jwc, person.age);
   jwEnd(jwc);
 
   return;
@@ -66,8 +56,10 @@ void person_root_object() {
   jwOpen(&json_state, json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add persons to object as key:Person */
-  jwObj_person(&json_state, alice.name, alice);
-  jwObj_person(&json_state, bob.name, bob);
+  jw_key(&json_state, alice.name);
+  jw_person(&json_state, alice);
+  jw_key(&json_state, bob.name);
+  jw_person(&json_state, bob);
 
   err = jwClose(&json_state); /* close and get error code */
 
@@ -108,7 +100,7 @@ void person_root_array() {
   /* Add all persons in catalog to json array */
   int i = 0;
   for (i = 0; i < catalog_length; i++) {
-    jwArr_person(&json_state, catalog[i]);
+    jw_person(&json_state, catalog[i]);
   }
 
   err = jwClose(&json_state); /* close and get error code */

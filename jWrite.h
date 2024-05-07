@@ -17,7 +17,7 @@
 #define JW_COMPACT 0 /* output string control for jwOpen() */
 #define JW_PRETTY 1  /* pretty adds \n and indentation */
 
-enum jwNodeType { JW_OBJECT = 1, JW_ARRAY };
+enum jwNodeType { JW_OBJECT = 1, JW_ARRAY, JW_VALUE };
 
 struct jwNodeStack {
   enum jwNodeType nodeType;
@@ -39,12 +39,14 @@ struct jWriteControl {
 
 /* Error Codes */
 #define JWRITE_OK 0
-#define JWRITE_BUF_FULL 1    /* output buffer full */
-#define JWRITE_NOT_ARRAY 2   /* tried to write Array value into Object */
-#define JWRITE_NOT_OBJECT 3  /* tried to write Object key/value into Array */
-#define JWRITE_STACK_FULL 4  /* array/object nesting > JWRITE_STACK_DEPTH */
-#define JWRITE_STACK_EMPTY 5 /* stack underflow error (too many 'end's) */
-#define JWRITE_NEST_ERROR 6  /* not all objects closed at jwClose()*/
+#define JWRITE_BUF_FULL 1      /* output buffer full */
+#define JWRITE_NOT_ARRAY 2     /* tried to write Array value into Object */
+#define JWRITE_NOT_OBJECT 3    /* tried to write Object key/value into Array */
+#define JWRITE_STACK_FULL 4    /* array/object nesting > JWRITE_STACK_DEPTH */
+#define JWRITE_STACK_EMPTY 5   /* stack underflow error (too many 'end's) */
+#define JWRITE_NEST_ERROR 6    /* not all objects closed at jwClose()*/
+#define JWRITE_NOT_VALUE 7     /* tried to write value without key */
+#define JWRITE_MISSING_VALUE 8 /* object missing value */
 
 /**
  * Get error description from error code
@@ -82,110 +84,59 @@ int jwClose();
 int jwErrorPos();
 
 /**
- * Insert quoted string as key:"value" to object
- *
- * @param key name of key
- * @param value as string
- */
-void jwObj_string(char *key, char *value);
-
-/**
- * Insert number as key:value to object
- *
- * @param key name of key
- * @param value as int
- */
-void jwObj_int(char *key, int value);
-
-/**
- * Insert number as key:value to object.
- * Number will be rounded, big values will be converted to scientific notation
- *
- * @param key name of key
- * @param value as double
- */
-void jwObj_double(char *key, double value);
-
-/**
- * Insert boolen as key:false|true to object.
- *
- * @param key name of key
- * @param value as int, 0 = false, >0 = true
- */
-void jwObj_bool(char *key, int oneOrZero);
-
-/**
- * Insert null as key:null to object.
+ * Insert key: to object
  *
  * @param key name of key
  */
-void jwObj_null(char *key);
+int jw_key(char *key);
 
 /**
- * Insert object as key:{ to object.
- * Add key:value with other function calls.
- * Close object with jwEnd()
- *
- * @param key name of key
- */
-void jwObj_object(char *key);
-
-/**
- * Insert array as key:[ to object.
- * Add value with other function calls.
- * Close array with jwEnd()
- *
- * @param key name of key
- */
-void jwObj_array(char *key);
-
-/**
- * Insert quoted string as "value" to array
+ * Insert quoted string as "value".
  *
  * @param value as string
  */
-void jwArr_string(char *value);
+void jw_string(char *value);
 
 /**
- * Insert number as value to array
+ * Insert number as value.
  *
  * @param value as int
  */
-void jwArr_int(int value);
+void jw_int(int value);
 
 /**
- * Insert number as value to array.
+ * Insert number as value.
  * Number will be rounded, big values will be converted to scientific notation
  *
  * @param value as double
  */
-void jwArr_double(double value);
+void jw_double(double value);
 
 /**
- * Insert boolen as false|true to array.
+ * Insert boolen as false|true.
  *
  * @param value as int, 0 = false, >0 = true
  */
-void jwArr_bool(int oneOrZero);
+void jw_bool(int oneOrZero);
 
 /**
- * Insert null as null to array.
+ * Insert null.
  */
-void jwArr_null();
+void jw_null();
 
 /**
- * Insert object as { to array.
+ * Insert object as {.
  * Add key:value with other function calls.
  * Close object with jwEnd()
  */
-void jwArr_object();
+void jw_object();
 
 /**
- * Insert array as [ to array.
+ * Insert array as [.
  * Add value with other function calls.
  * Close array with jwEnd()
  */
-void jwArr_array();
+void jw_array();
 
 /**
  * Defines the end of an Object or Array definition.
@@ -195,23 +146,13 @@ void jwArr_array();
 int jwEnd();
 
 /**
- * Insert raw text to JSON as key:rawtext to object.
- * Enclosing quotes are not added.
- * Use with custom value->string function.
- *
- * @param key name of key
- * @param rawtext as string
- */
-void jwObj_raw(char *key, char *rawtext);
-
-/**
- * Insert raw text to JSON as rawtext to array.
+ * Insert raw text to JSON as rawtext.
  * Enclosing quotes are not added.
  * Use with custom value->string function.
  *
  * @param rawtext as string
  */
-void jwArr_raw(char *rawtext);
+void jw_raw(char *rawtext);
 
 #else /* JW_GLOBAL_CONTROL_STRUCT not defined */
 /* Same API functions with app-supplied control struct option */
@@ -245,127 +186,70 @@ int jwClose(struct jWriteControl *jwc);
 int jwErrorPos(struct jWriteControl *jwc);
 
 /**
- * Insert quoted string as key:"value" to object
- *
- * @param jwc control struct for json state
- * @param key name of key
- * @param value as string
- */
-void jwObj_string(struct jWriteControl *jwc, char *key, char *value);
-
-/**
- * Insert number as key:value to object
- *
- * @param jwc control struct for json state
- * @param key name of key
- * @param value as int
- */
-void jwObj_int(struct jWriteControl *jwc, char *key, int value);
-
-/**
- * Insert number as key:value to object.
- * Number will be rounded, big values will be converted to scientific notation
- *
- * @param jwc control struct for json state
- * @param key name of key
- * @param value as double
- */
-void jwObj_double(struct jWriteControl *jwc, char *key, double value);
-
-/**
- * Insert boolen as key:false|true to object.
- *
- * @param jwc control struct for json state
- * @param key name of key
- * @param value as int, 0 = false, >0 = true
- */
-void jwObj_bool(struct jWriteControl *jwc, char *key, int oneOrZero);
-
-/**
- * Insert null as key:null to object.
+ * Insert key: to object
  *
  * @param jwc control struct for json state
  * @param key name of key
  */
-void jwObj_null(struct jWriteControl *jwc, char *key);
+int jw_key(struct jWriteControl *jwc, char *key);
 
 /**
- * Insert object as key:{ to object.
- * Add key:value with other function calls.
- * Close object with jwEnd()
- *
- * @param jwc control struct for json state
- * @param key name of key
- */
-void jwObj_object(struct jWriteControl *jwc, char *key);
-
-/**
- * Insert array as key:[ to object.
- * Add value with other function calls.
- * Close array with jwEnd()
- *
- * @param jwc control struct for json state
- * @param key name of key
- */
-void jwObj_array(struct jWriteControl *jwc, char *key);
-
-/**
- * Insert quoted string as "value" to array
+ * Insert quoted string as "value".
  *
  * @param jwc control struct for json state
  * @param value as string
  */
-void jwArr_string(struct jWriteControl *jwc, char *value);
+void jw_string(struct jWriteControl *jwc, char *value);
 
 /**
- * Insert number as value to array
+ * Insert number as value.
  *
  * @param jwc control struct for json state
  * @param value as int
  */
-void jwArr_int(struct jWriteControl *jwc, int value);
+void jw_int(struct jWriteControl *jwc, int value);
 
 /**
- * Insert number as value to array.
+ * Insert number as value.
  * Number will be rounded, big values will be converted to scientific notation
  *
  * @param jwc control struct for json state
  * @param value as double
  */
-void jwArr_double(struct jWriteControl *jwc, double value);
+void jw_double(struct jWriteControl *jwc, double value);
 
 /**
- * Insert boolen as false|true to array.
+ * Insert boolen as false|true.
  *
  * @param jwc control struct for json state
  * @param value as int, 0 = false, >0 = true
  */
-void jwArr_bool(struct jWriteControl *jwc, int oneOrZero);
+void jw_bool(struct jWriteControl *jwc, int oneOrZero);
 
 /**
- * Insert null as null to array.
+ * Insert null as null.
  *
  * @param jwc control struct for json state
  */
-void jwArr_null(struct jWriteControl *jwc);
+void jw_null(struct jWriteControl *jwc);
 
 /**
- * Insert object as { to array.
+ * Insert object as {.
  * Add key:value with other function calls.
  * Close object with jwEnd()
  *
  * @param jwc control struct for json state
  */
-void jwArr_object(struct jWriteControl *jwc);
+void jw_object(struct jWriteControl *jwc);
 
 /**
- * Insert array as [ to array.
+ * Insert array as [.
  * Add value with other function calls.
  * Close array with jwEnd()
  *
  * @param jwc control struct for json state
  */
-void jwArr_array(struct jWriteControl *jwc);
+void jw_array(struct jWriteControl *jwc);
 
 /**
  * Defines the end of an Object or Array definition.
@@ -377,24 +261,13 @@ void jwArr_array(struct jWriteControl *jwc);
 int jwEnd(struct jWriteControl *jwc);
 
 /**
- * Insert raw text to JSON as key:rawtext to object.
- * Enclosing quotes are not added.
- * Use with custom value->string function.
- *
- * @param jwc control struct for json state
- * @param key name of key
- * @param rawtext as string
- */
-void jwObj_raw(struct jWriteControl *jwc, char *key, char *rawtext);
-
-/**
- * Insert raw text to JSON as rawtext to array.
+ * Insert raw text to JSON as rawtext.
  * Enclosing quotes are not added.
  * Use with custom value->string function.
  *
  * @param jwc control struct for json state
  * @param rawtext as string
  */
-void jwArr_raw(struct jWriteControl *jwc, char *rawtext);
+void jw_raw(struct jWriteControl *jwc, char *rawtext);
 
 #endif /* JW_GLOBAL_CONTROL_STRUCT */

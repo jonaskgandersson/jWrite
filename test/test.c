@@ -55,14 +55,73 @@ MU_TEST(test_obj_open_length) {
   jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
   MU_ASSERT_EQ(1, (int)strlen(json));
 
-  jwObj_string("key1", "string");
+  jw_key("key1");
+  jw_string("string");
   MU_ASSERT_EQ(16, (int)strlen(json));
 
-  jwObj_string("key2", "to long string");
+  jw_key("key2");
+  jw_string("to long string");
   MU_ASSERT_EQ(31, (int)strlen(json));
   int err = jwClose();
   MU_ASSERT_EQ(31, (int)strlen(json));
   MU_ASSERT_EQ(JWRITE_BUF_FULL, err);
+  return 0;
+}
+
+MU_TEST(test_obj_key) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  jw_string("String");
+  int err = jwClose();
+
+  MU_ASSERT_EQ(JWRITE_OK, err);
+  MU_ASSERT_MATCH("{\"Key\":\"String\"}", json);
+  return 0;
+}
+
+MU_TEST(test_obj_key_no_value) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  int err = jwClose();
+
+  MU_ASSERT_MATCH("{\"Key\":", json);
+  MU_ASSERT_EQ(JWRITE_NEST_ERROR, err);
+  return 0;
+}
+
+MU_TEST(test_obj_key_end_no_value) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  jw_object();
+  jw_key("Key2");
+  jwEnd();
+  int err = jwClose();
+
+  MU_ASSERT_MATCH("{\"Key\":{\"Key2\":", json);
+  MU_ASSERT_EQ(JWRITE_MISSING_VALUE, err);
+  return 0;
+}
+
+MU_TEST(test_obj_key_key) {
+  char json[64];
+
+  jwOpen(json, 32, JW_OBJECT, JW_COMPACT);
+
+  jw_key("Key");
+  jw_key("Key2");
+  int err = jwClose();
+
+  MU_ASSERT_MATCH("{\"Key\":\"Key2\":", json);
+  MU_ASSERT_EQ(JWRITE_NOT_OBJECT, err);
   return 0;
 }
 
@@ -72,7 +131,8 @@ MU_TEST(test_obj_string_compact) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_string("key", "string");
+  jw_key("key");
+  jw_string("string");
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\"key\":\"string\"}", json);
@@ -85,7 +145,8 @@ MU_TEST(test_obj_string_pretty) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_PRETTY);
-  jwObj_string("key", "string");
+  jw_key("key");
+  jw_string("string");
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\n    \"key\": \"string\"\n}", json);
@@ -99,7 +160,8 @@ MU_TEST(test_close_ok) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_PRETTY);
-  jwObj_string("key", "string");
+  jw_key("key");
+  jw_string("string");
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\n    \"key\": \"string\"\n}", json);
@@ -112,7 +174,8 @@ MU_TEST(test_close_array_not_closed) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_array("array");
+  jw_key("array");
+  jw_array();
   /* Missing jwEnd() here */
   int err = jwClose();
 
@@ -130,7 +193,7 @@ MU_TEST(test_close_stack_full) {
   int i = 0;
   /* Add nested arrays to max depth */
   for (i = 0; i < JWRITE_STACK_DEPTH; i++) {
-    jwArr_array();
+    jw_array();
   }
   int err = jwClose();
   MU_ASSERT_EQ(JWRITE_STACK_FULL, err);
@@ -142,8 +205,10 @@ MU_TEST(test_end_object) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_object("obj1");
-  jwObj_int("int1", 1);
+  jw_key("obj1");
+  jw_object();
+  jw_key("int1");
+  jw_int(1);
   jwEnd();
   int err = jwClose();
   MU_ASSERT_EQ(JWRITE_OK, err);
@@ -156,8 +221,9 @@ MU_TEST(test_end_array) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_array("array1");
-  jwArr_int(1);
+  jw_key("array1");
+  jw_array();
+  jw_int(1);
   jwEnd();
   int err = jwClose();
   MU_ASSERT_EQ(JWRITE_OK, err);
@@ -170,8 +236,9 @@ MU_TEST(test_end_missing) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_array("array1");
-  jwArr_int(1);
+  jw_key("array1");
+  jw_array();
+  jw_int(1);
   /* Missing jwEnd(); here to close array */
   int err = jwClose();
   MU_ASSERT_EQ(JWRITE_NEST_ERROR, err);
@@ -184,8 +251,9 @@ MU_TEST(test_end_to_many) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_array("array1");
-  jwArr_int(1);
+  jw_key("array1");
+  jw_array();
+  jw_int(1);
   jwEnd();
   jwEnd(); /* This end is one to much */
   int err = jwClose();
@@ -199,7 +267,8 @@ MU_TEST(test_obj_int_basic) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_int("int1", 1);
+  jw_key("int1");
+  jw_int(1);
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\"int1\":1}", json);
@@ -212,7 +281,8 @@ MU_TEST(test_obj_double_basic) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_double("double1", 1);
+  jw_key("double1");
+  jw_double(1);
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\"double1\":1}", json);
@@ -225,8 +295,10 @@ MU_TEST(test_obj_bool) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_bool("bool_true", 1);
-  jwObj_bool("bool_false", 0);
+  jw_key("bool_true");
+  jw_bool(1);
+  jw_key("bool_false");
+  jw_bool(0);
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\"bool_true\":true,\"bool_false\":false}", json);
@@ -239,7 +311,8 @@ MU_TEST(test_obj_null) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_null("null");
+  jw_key("null");
+  jw_null();
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\"null\":null}", json);
@@ -252,7 +325,8 @@ MU_TEST(test_obj_object) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_object("object");
+  jw_key("object");
+  jw_object();
   jwEnd();
   int err = jwClose();
 
@@ -266,7 +340,8 @@ MU_TEST(test_obj_array) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_array("array");
+  jw_key("array");
+  jw_array();
   jwEnd();
   int err = jwClose();
 
@@ -280,7 +355,8 @@ MU_TEST(test_obj_raw) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_raw("raw", "abc");
+  jw_key("raw");
+  jw_raw("abc");
   int err = jwClose();
 
   MU_ASSERT_MATCH("{\"raw\":abc}", json);
@@ -295,7 +371,7 @@ MU_TEST(test_arr_raw) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_raw("abc");
+  jw_raw("abc");
   int err = jwClose();
 
   MU_ASSERT_MATCH("[abc]", json);
@@ -308,7 +384,7 @@ MU_TEST(test_arr_string) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_string("abc");
+  jw_string("abc");
   int err = jwClose();
 
   MU_ASSERT_MATCH("[\"abc\"]", json);
@@ -321,7 +397,7 @@ MU_TEST(test_arr_int_basic) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_int(42);
+  jw_int(42);
   int err = jwClose();
 
   MU_ASSERT_MATCH("[42]", json);
@@ -334,7 +410,7 @@ MU_TEST(test_arr_double_basic) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_double(3.14);
+  jw_double(3.14);
   int err = jwClose();
 
   MU_ASSERT_MATCH("[3.14]", json);
@@ -347,8 +423,8 @@ MU_TEST(test_arr_bool) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_bool(1);
-  jwArr_bool(0);
+  jw_bool(1);
+  jw_bool(0);
   int err = jwClose();
 
   MU_ASSERT_MATCH("[true,false]", json);
@@ -361,7 +437,7 @@ MU_TEST(test_arr_null) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_null();
+  jw_null();
   int err = jwClose();
 
   MU_ASSERT_MATCH("[null]", json);
@@ -374,9 +450,9 @@ MU_TEST(test_arr_object) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_object();
+  jw_object();
   jwEnd();
-  jwArr_object();
+  jw_object();
   jwEnd();
   int err = jwClose();
 
@@ -390,9 +466,9 @@ MU_TEST(test_arr_array) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_array();
+  jw_array();
   jwEnd();
-  jwArr_array();
+  jw_array();
   jwEnd();
   int err = jwClose();
 
@@ -407,8 +483,9 @@ MU_TEST(test_arr_key_value_insert) {
   char json[length];
 
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
-  jwArr_array();
-  jwObj_int("Int", 42); /* Error insert key value to array */
+  jw_array();
+  jw_key("Int");
+  jw_int(42); /* Error insert key value to array */
   jwEnd();
   int err = jwClose();
 
@@ -425,11 +502,11 @@ MU_TEST(test_obj_array_insert) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwArr_int(42); /* Error insert array value to object, missing key */
+  jw_int(42); /* Error insert array value to object, missing key */
   jwEnd();
   int err = jwClose();
 
-  MU_ASSERT_EQ(JWRITE_NOT_ARRAY, err);
+  MU_ASSERT_EQ(JWRITE_NOT_VALUE, err);
 
   int err_pos = jwErrorPos();
   MU_ASSERT_EQ(2, err_pos);
@@ -444,20 +521,28 @@ MU_TEST(test_obj_write_not_ok) {
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
   jwEnd();
   /* This calls will return direct as json already closed */
-  jwObj_raw("raw", "Not written");
-  jwObj_string("string", "Not written");
-  jwObj_int("int", 42);
-  jwObj_double("double", 3.14);
-  jwObj_bool("bool", 1);
-  jwObj_null("null");
-  jwObj_object("object");
-  jwObj_array("array");
+  jw_key("raw");
+  jw_raw("Not written");
+  jw_key("string");
+  jw_string("Not written");
+  jw_key("int");
+  jw_int(42);
+  jw_key("double");
+  jw_double(3.14);
+  jw_key("bool");
+  jw_bool(1);
+  jw_key("nul");
+  jw_null();
+  jw_key("object");
+  jw_object();
+  jw_key("array");
+  jw_array();
   int err = jwClose();
 
   MU_ASSERT_EQ(JWRITE_STACK_EMPTY, err);
 
   int err_pos = jwErrorPos();
-  MU_ASSERT_EQ(1, err_pos);
+  MU_ASSERT_EQ(2, err_pos);
 
   return 0;
 }
@@ -469,20 +554,20 @@ MU_TEST(test_arr_write_not_ok) {
   jwOpen(json, length, JW_ARRAY, JW_COMPACT);
   jwEnd();
   /* This calls will return direct as json already closed */
-  jwArr_raw("Not written");
-  jwArr_string("Not written");
-  jwArr_int(42);
-  jwArr_double(3.14);
-  jwArr_bool(1);
-  jwArr_null();
-  jwArr_object();
-  jwArr_array();
+  jw_raw("Not written");
+  jw_string("Not written");
+  jw_int(42);
+  jw_double(3.14);
+  jw_bool(1);
+  jw_null();
+  jw_object();
+  jw_array();
   int err = jwClose();
 
   MU_ASSERT_EQ(JWRITE_STACK_EMPTY, err);
 
   int err_pos = jwErrorPos();
-  MU_ASSERT_EQ(1, err_pos);
+  MU_ASSERT_EQ(2, err_pos);
 
   return 0;
 }
@@ -496,7 +581,7 @@ MU_TEST(test_error_to_string) {
   MU_ASSERT_MATCH("tried to write Array value into Object",
                   jwErrorToString(JWRITE_NOT_ARRAY));
 
-  MU_ASSERT_MATCH("tried to write Object key/value into Array",
+  MU_ASSERT_MATCH("tried to write key into no object",
                   jwErrorToString(JWRITE_NOT_OBJECT));
 
   MU_ASSERT_MATCH("array/object nesting > JWRITE_STACK_DEPTH",
@@ -507,6 +592,12 @@ MU_TEST(test_error_to_string) {
 
   MU_ASSERT_MATCH("nesting error, not all objects closed when jwClose() called",
                   jwErrorToString(JWRITE_NEST_ERROR));
+
+  MU_ASSERT_MATCH("tried to write value without key",
+                  jwErrorToString(JWRITE_NOT_VALUE));
+
+  MU_ASSERT_MATCH("object missing value",
+                  jwErrorToString(JWRITE_MISSING_VALUE));
 
   MU_ASSERT_MATCH("Unknown error", jwErrorToString(999));
 
@@ -521,7 +612,8 @@ MU_TEST(test_nan) {
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
 
   double nan = 0.0 / 0.0; /* Create nan from devision by 0 */
-  jwObj_double("Nan", nan);
+  jw_key("Nan");
+  jw_double(nan);
   int err = jwClose();
 
   MU_ASSERT_EQ(JWRITE_OK, err);
@@ -536,8 +628,10 @@ MU_TEST(test_double_max_decimals) {
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
 
-  jwObj_double("decimal", 0.123456789);
-  jwObj_double("decimal_neg", -0.123456789);
+  jw_key("decimal");
+  jw_double(0.123456789);
+  jw_key("decimal_neg");
+  jw_double(-0.123456789);
   int err = jwClose();
 
   MU_ASSERT_EQ(JWRITE_OK, err);
@@ -554,8 +648,10 @@ MU_TEST(test_double_max_normal) {
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
 
   /* jWrite  converts to scientific notation above this value */
-  jwObj_double("max_normal", 0x7FFFFFFF);
-  jwObj_double("max_normal_neg", -0x7FFFFFFF);
+  jw_key("max_normal");
+  jw_double(0x7FFFFFFF);
+  jw_key("max_normal_neg");
+  jw_double(-0x7FFFFFFF);
   int err = jwClose();
 
   MU_ASSERT_EQ(JWRITE_OK, err);
@@ -572,8 +668,10 @@ MU_TEST(test_double_first_scientific) {
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
 
   /* jWrite  converts to scientific */
-  jwObj_double("first_scientific", 2147483648);
-  jwObj_double("first_scientific_neg", -2147483648);
+  jw_key("first_scientific");
+  jw_double(2147483648);
+  jw_key("first_scientific_neg");
+  jw_double(-2147483648);
   int err = jwClose();
 
   MU_ASSERT_EQ(JWRITE_OK, err);
@@ -589,8 +687,10 @@ MU_TEST(test_int_max) {
   char json[length];
 
   jwOpen(json, length, JW_OBJECT, JW_COMPACT);
-  jwObj_int("int_max", 2147483647);
-  jwObj_int("int_max_neg", -2147483648);
+  jw_key("int_max");
+  jw_int(2147483647);
+  jw_key("int_max_neg");
+  jw_int(-2147483648);
   int err = jwClose();
 
   MU_ASSERT_EQ(JWRITE_OK, err);
@@ -606,6 +706,11 @@ static void all_tests() {
   MU_RUN_TEST(test_array_open_compact);
   MU_RUN_TEST(test_array_open_pretty);
   MU_RUN_TEST(test_obj_open_length);
+
+  MU_RUN_TEST(test_obj_key);
+  MU_RUN_TEST(test_obj_key_no_value);
+  MU_RUN_TEST(test_obj_key_end_no_value);
+  MU_RUN_TEST(test_obj_key_key);
 
   MU_RUN_TEST(test_obj_string_compact);
   MU_RUN_TEST(test_obj_string_pretty);

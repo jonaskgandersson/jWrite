@@ -1,4 +1,4 @@
-# jWrite
+# jWrite v2
 C JSON Writer
 
 Credit to [Tony Wilk](https://www.codeproject.com/Members/tonywilk)
@@ -6,6 +6,9 @@ Credit to [Tony Wilk](https://www.codeproject.com/Members/tonywilk)
 Orginal publish [jWrite-a-really-simple-JSON-writer-in-C](https://www.codeproject.com/Articles/887604/jWrite-a-really-simple-JSON-writer-in-C)
  
 ## Introduction
+**Version 2**. This has a new API and differ from orginal implementation. The goal is to be easier to use and maintain.
+
+
 jWrite is a simple way of writing JSON to a char buffer in C, directly from native variables. It manages the output buffer so you don't overrun, it handles all the fiddly quotes, brackets and commas and reports where you have tried to create invalid JSON.
 
 There is now a C++ version with demo sketch for Arduino. [jWriteCpp](https://github.com/jonaskgandersson/jWriteCpp)
@@ -31,25 +34,23 @@ Jumping straight in:
 ```c
 int main() {
   char json[1024];
-  jwOpen( json, 1024, JW_OBJECT, JW_PRETTY );  // open root node as object
-    jwObj_string( "key", "value" );            // writes "key":"value"
-    jwObj_int( "int", 1 );                     // writes "int":1
-    jwObj_array( "anArray");                   // start "anArray": [...] 
-      jwArr_int( 0 );                          // add a few integers to the array
-      jwArr_int( 1 );
-      jwArr_int( 2 );
-    jwEnd();                                   // end the array
-  err= jwClose();                              // close root object - done
+  jwOpen(json, 1024, JW_OBJECT, JW_PRETTY);  // open root node as object
+    jw_key( "key" );                         // writes "key":
+    jw_string( "value" );                    // writes "value"
+    jw_key( "int" );                         // writes "int":
+    jw_int( 1 );                             // writes 1
+    jw_key( "anArray" );                     // writes "anArray":
+    jw_array();                              // start "anArray": [...] 
+      jw_int( 0 );                           // add a few integers to the array
+      jw_int( 1 );
+      jw_int( 2 );
+    jwEnd();                                 // end the array
+  jwClose();                                 // close root object - done
 }
 ```
 The json is build up from multiple write calls:
-![jWrite example gif](./examples/jWrite_basic.gif)
 
-**Objects in array**
-
-![jWrite nested example gif](./examples/jWrite_nested.gif)
-
-The output is prettyfied (it's an option) and has all the { } [ ] , : " characters in the right place.
+![jWrite example gif](./examples/jWrite_basic_v2.gif)
 
 There are longer examples in the examples directory.
 
@@ -61,30 +62,33 @@ You can easily call a sequence of jWrite functions which are invalid, like:
 
 ```c
 jwOpen( buffer, buflen, JW_OBJECT, JW_PRETTY );  // open root node as object
-jwObj_string( "key", "value" );                  // writes "key":"value"
-jwObj_int( "int", 1 );                           // writes "int":1
-    jwArr_int( 0 );                              // add a few integers to the array
+jw_key( "key" );                         // writes "key":
+jw_string( "value" );                    // writes "value"
+jw_key( "int" );                         // writes "int":
+jw_int( 1 );                             // writes 1
+  jw_int( 0 );                              // invalid, no key
 ...
 ```
-Since the JSON root is an object, we must insert "key":"value" pairs, so the call to jwArr_int( 0 ) is not valid at this point... this sets an internal error flag to "tried to write Array value into Object" and ignores subsequent function calls until the ending jwClose() when it reports the error.
+Since the JSON root is an object, we must insert "key":"value" pairs, so the call to jw_int( 0 ) is not valid at this point... this sets an internal error flag to "tried to write value without key"" and ignores subsequent function calls until the ending jwClose() when it reports the error.
 
-When writing a large JSON file, it may be difficult to figure out where you went wrong... in this case, jWrite helps out by giving you the number of the function which caused the error and leaving the partially-constructed JSON in your buffer (with '\0' termianator). In the above case, jwErrorPos() would return 4 because the 4th function in this sequence caused the error (the jwOpen() call is number 1)
+When writing a large JSON file, it may be difficult to figure out where you went wrong... in this case, jWrite helps out by giving you the number of the function which caused the error and leaving the partially-constructed JSON in your buffer (with '\0' termianator). In the above case, jwErrorPos() would return 6 because the 6th function in this sequence caused the error (the jwOpen() call is number 1)
 
 ### "Advanced" usage
 Since jWrite handles the JSON formatting, it's easy to create the output programatically (rather than in-line as above) like:
 ```c
 jwOpen( buffer, buflen, JWOBJECT, JW_COMPACT );    // outer JSON is an object, compact format
 
-jwObj_array( "myArray" );                          // contains an array: "myArray":[...]
+jw_key( "myArray" );
+jw_array();                          // contains an array: "myArray":[...]
 for( i=0; i<myArrayLen; i++ )
-    jwArr_int( myArray[i] );                       // write zero or more array entries
+    jw_int( myArray[i] );                       // write zero or more array entries
 jwEnd();
 
 err= jwClose();
 ```
 In this example, myArrayLen could be anything (0,1,2...) and jWrite handles the output and puts the array value separator commas in the right places.
 
-Any valid JSON sequence can be created with value types of Object, Array, int, double, bool, null and string. You can also add your own stringified values by inserting them raw, e.g., jwObj_raw( "key", rawtext ).
+Any valid JSON sequence can be created with value types of Object, Array, int, double, bool, null and string. You can also add your own stringified values by inserting them raw, e.g., jw_raw( rawtext ).
 
 ## Points of Interest
 The Internal Control Structure
@@ -107,14 +111,17 @@ The above example with #define JW_GLOBAL_CONTROL_STRUCT commented out looks like
 ```c
 struct jWriteControl jwc;
 jwOpen( &jwc, buffer, buflen, JW_OBJECT, JW_PRETTY );  // open root node as object
-jwObj_string( &jwc, "key", "value" );                  // writes "key":"value"
-jwObj_int( &jwc, "int", 1 );                           // writes "int":1
-jwObj_array( &jwc, "anArray");                         // start "anArray": [...] 
-    jwArr_int( &jwc, 0 );                              // add a few integers to the array
-    jwArr_int( &jwc, 1 );
-    jwArr_int( &jwc, 2 );
-jwEnd( &jwc );                                         // end the array
-err= jwClose( &jwc );                                  // close root object - done
+  jw_key( &jwc, "key" );                         // writes "key":
+  jw_string( &jwc, "value" );                    // writes "value"
+  jw_key( &jwc, "int" );                         // writes "int":
+  jw_int( &jwc, 1 );                             // writes 1
+  jw_key( &jwc, "anArray" );                     // writes "anArray":
+  jw_array( &jwc );                              // start "anArray": [...] 
+    jw_int( &jwc, 0 );                           // add a few integers to the array
+    jw_int( &jwc, 1 );
+    jw_int( &jwc, 2 );
+  jwEnd( &jwc );                                 // end the array
+wClose( &jwc );                                 // close root object - done
 ```
 Which is a lot more to type in and begs to be a C++ class really... which has now been written with an example sketch for Arduino, although the class itself is applicable to any platform.
 

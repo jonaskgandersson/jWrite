@@ -22,11 +22,15 @@ void basic_root_object() {
   jwOpen(json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add key:value pairs of different types to object */
-  jwObj_string("key", "value");
-  jwObj_int("int", 1);
-  jwArr_double(1.234); /* Wrong function, array value to object, no key */
-  jwObj_null("nullThing");
-  jwObj_bool("bool", 1);
+  jw_key("key");
+  jw_string("value");
+  jw_key("int");
+  jw_int(1);
+  jw_double(1.234); /* Wrong function, value to object, no key */
+  jw_key("nullThing");
+  jw_null();
+  jw_key("bool");
+  jw_bool(1);
 
   err = jwClose(); /* close and get error code */
 
@@ -53,11 +57,12 @@ void basic_root_array() {
   jwOpen(json, maxJsonLen, JW_ARRAY, JW_PRETTY);
 
   /* Add value of different types to array */
-  jwArr_string("value");
-  jwArr_int(1);
-  jwObj_double("double", 1.234); /* Wrong function, key:value to array */
-  jwArr_null();
-  jwArr_bool(1);
+  jw_string("value");
+  jw_int(1);
+  jw_key("double"); /* Wrong function, key to array */
+  jw_double(1.234);
+  jw_null();
+  jw_bool(1);
 
   err = jwClose(); /* close and get error code */
 
@@ -83,16 +88,18 @@ void array_in_object() {
   jwOpen(json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add empty to object */
-  jwObj_array("array_empty"); /* Create and open array */
+  jw_key("array_empty");
+  jw_array(); /* Create and open array */
   /*  jwEnd();                    Missing close array */
 
   /* Create array and insert basic types */
-  jwObj_array("array_basic");
-  jwArr_string("value");
-  jwArr_int(1);
-  jwArr_double(1.234);
-  jwArr_null();
-  jwArr_bool(1);
+  jw_key("array_basic");
+  jw_array();
+  jw_string("value");
+  jw_int(1);
+  jw_double(1.234);
+  jw_null();
+  jw_bool(1);
   jwEnd();
 
   err = jwClose(); /* close and get error code */
@@ -126,16 +133,23 @@ void object_in_object() {
   jwOpen(json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add empty to object */
-  jwObj_object("object_empty"); /* Create and open object */
+  jw_key("object_empty");
+  jw_object(); /* Create and open object */
   /* jwEnd();                      Missing end close object */
 
   /* Create object and insert basic types */
-  jwObj_object("object_basic");
-  jwObj_string("key", "value");
-  jwObj_int("int", 1);
-  jwObj_double("double", 1.234);
-  jwObj_null("nullThing");
-  jwObj_bool("bool", 1);
+  jw_key("object_basic");
+  jw_object();
+  jw_key("key");
+  jw_string("value");
+  jw_key("int");
+  jw_int(1);
+  jw_key("double");
+  jw_double(1.234);
+  jw_key("nullThing");
+  jw_null();
+  jw_key("bool");
+  jw_bool(1);
   jwEnd();
 
   err = jwClose(); /* close and get error code */
