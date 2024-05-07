@@ -4,6 +4,7 @@
  * A *really* simple JSON writer in C
  *
  * TonyWilk, Mar 2015
+ * Jonas Andersson, 2024
  */
 
 /* stop complaining about deprecated functions */
@@ -132,16 +133,30 @@ int jwEnd(JWC_DECL0) {
  */
 int jwErrorPos(JWC_DECL0) { return JWC(callNo); }
 
-/*------------------------------------------
- * Object insert functions
- */
 int _jwArr(JWC_DECL0);
 
-/* Old API, wrapper for backward compatibility
+/* *common Object function*
+ * - checks error
+ * - checks current node is OBJECT
+ * - adds comma if reqd
+ * - adds "key" :
+ * - sets node type to value
  */
-void jwObj_raw(JWC_DECL char *key, char *rawtext) {
-  jw_key(JWC_PARAM key);
-  jw_raw(JWC_PARAM rawtext);
+int jw_key(JWC_DECL char *key) {
+  if (JWC(error) == JWRITE_OK) {
+    JWC(callNo)++;
+    if (JWC(nodeStack)[JWC(stackpos)].nodeType != JW_OBJECT)
+      JWC(error) = JWRITE_NOT_OBJECT; /* tried to write Object key into Array */
+    else if (JWC(nodeStack)[JWC(stackpos)].elementNo++ > 0)
+      jwPutch(JWC_PARAM ',');
+    jwPretty(JWC_PARAM0);
+    jwPutstr(JWC_PARAM key);
+    jwPutch(JWC_PARAM ':');
+    if (JWC(isPretty))
+      jwPutch(JWC_PARAM ' ');
+    jwPush(JWC_PARAM JW_VALUE);
+  }
+  return JWC(error);
 }
 
 /* put raw string to object (i.e. contents of rawtext without quotes)
@@ -198,26 +213,9 @@ void jw_string(JWC_DECL char *value) {
   }
 }
 
-/* Old API, wrapper for backward compatibility
- */
-void jwObj_string(JWC_DECL char *key, char *value) {
-  jw_key(JWC_PARAM key);
-  jw_string(JWC_PARAM value);
-}
-
-void jwObj_int(JWC_DECL char *key, int value) {
-  jw_key(JWC_PARAM key);
-  jw_int(JWC_PARAM value);
-}
-
 void jw_int(JWC_DECL int value) {
   modp_itoa10(value, JWC(tmpbuf));
   jw_raw(JWC_PARAM JWC(tmpbuf));
-}
-
-void jwObj_double(JWC_DECL char *key, double value) {
-  jw_key(JWC_PARAM key);
-  jw_double(JWC_PARAM value);
 }
 
 void jw_double(JWC_DECL double value) {
@@ -225,31 +223,12 @@ void jw_double(JWC_DECL double value) {
   jw_raw(JWC_PARAM JWC(tmpbuf));
 }
 
-void jwObj_bool(JWC_DECL char *key, int oneOrZero) {
-  jw_key(JWC_PARAM key);
-  jw_bool(JWC_PARAM oneOrZero);
-}
-
 void jw_bool(JWC_DECL int oneOrZero) {
   jw_raw(JWC_PARAM(oneOrZero) ? "true" : "false");
 }
 
-void jwObj_null(JWC_DECL char *key) {
-  jw_key(JWC_PARAM key);
-  jw_null(JWC_PARAM0);
-}
-
 void jw_null(JWC_DECL0) { jw_raw(JWC_PARAM "null"); }
 
-/* put Object in Object
- */
-void jwObj_object(JWC_DECL char *key) {
-  jw_key(JWC_PARAM key);
-  jw_object(JWC_PARAM0);
-}
-
-/* put Object
- */
 void jw_object(JWC_DECL0) {
   if (JWC(error) == JWRITE_OK) {
     JWC(callNo)++;
@@ -275,13 +254,6 @@ void jw_object(JWC_DECL0) {
       break;
     }
   }
-}
-
-/* put Array in Object
- */
-void jwObj_array(JWC_DECL char *key) {
-  jw_key(JWC_PARAM key);
-  jw_array(JWC_PARAM0);
 }
 
 void jw_array(JWC_DECL0) {
@@ -310,30 +282,6 @@ void jw_array(JWC_DECL0) {
     }
   }
 }
-
-/*------------------------------------------
- * Array insert functions
- */
-
-/* put raw string to array (i.e. contents of rawtext without quotes)
- */
-void jwArr_raw(JWC_DECL char *rawtext) { jw_raw(JWC_PARAM rawtext); }
-
-/* put "quoted" string to array
- */
-void jwArr_string(JWC_DECL char *value) { jw_string(JWC_PARAM value); }
-
-void jwArr_int(JWC_DECL int value) { jw_int(JWC_PARAM value); }
-
-void jwArr_double(JWC_DECL double value) { jw_double(JWC_PARAM value); }
-
-void jwArr_bool(JWC_DECL int oneOrZero) { jw_bool(JWC_PARAM oneOrZero); }
-
-void jwArr_null(JWC_DECL0) { jw_null(JWC_PARAM0); }
-
-void jwArr_object(JWC_DECL0) { jw_object(JWC_PARAM0); }
-
-void jwArr_array(JWC_DECL0) { jw_array(JWC_PARAM0); }
 
 /*------------------------------------------
  * jwErrorToString
@@ -420,30 +368,6 @@ void jwPutstr(JWC_DECL char *str) {
 void jwPutraw(JWC_DECL char *str) {
   while (*str != '\0')
     jwPutch(JWC_PARAM * str++);
-}
-
-/* *common Object function*
- * - checks error
- * - checks current node is OBJECT
- * - adds comma if reqd
- * - adds "key" :
- * - sets node type to value
- */
-int jw_key(JWC_DECL char *key) {
-  if (JWC(error) == JWRITE_OK) {
-    JWC(callNo)++;
-    if (JWC(nodeStack)[JWC(stackpos)].nodeType != JW_OBJECT)
-      JWC(error) = JWRITE_NOT_OBJECT; /* tried to write Object key into Array */
-    else if (JWC(nodeStack)[JWC(stackpos)].elementNo++ > 0)
-      jwPutch(JWC_PARAM ',');
-    jwPretty(JWC_PARAM0);
-    jwPutstr(JWC_PARAM key);
-    jwPutch(JWC_PARAM ':');
-    if (JWC(isPretty))
-      jwPutch(JWC_PARAM ' ');
-    jwPush(JWC_PARAM JW_VALUE);
-  }
-  return JWC(error);
 }
 
 /* *common Array function*
@@ -643,5 +567,3 @@ void modp_dtoa2(double value, char *str, int prec) {
   *wstr = '\0';
   strreverse(str, wstr - 1);
 }
-
-/* end of jWrite.c */

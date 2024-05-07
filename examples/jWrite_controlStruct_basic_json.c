@@ -26,11 +26,16 @@ void basic_root_object() {
   jwOpen(&jwc, json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add key:value pairs of different types to object */
-  jwObj_string(&jwc, "key", "value");
-  jwObj_int(&jwc, "int", 1);
-  jwObj_double(&jwc, "double", 1.234);
-  jwObj_null(&jwc, "nullThing");
-  jwObj_bool(&jwc, "bool", 1);
+  jw_key(&jwc, "key");
+  jw_string(&jwc, "value");
+  jw_key(&jwc, "int");
+  jw_int(&jwc, 1);
+  jw_key(&jwc, "double");
+  jw_double(&jwc, 1.234);
+  jw_key(&jwc, "nullThing");
+  jw_null(&jwc);
+  jw_key(&jwc, "bool");
+  jw_bool(&jwc, 1);
 
   err = jwClose(&jwc); /* close and get error code */
 
@@ -55,11 +60,16 @@ void basic_root_object_compact() {
   jwOpen(&jwc, json, maxJsonLen, JW_OBJECT, JW_COMPACT);
 
   /* Add key:value pairs of different types to object */
-  jwObj_string(&jwc, "key", "value");
-  jwObj_int(&jwc, "int", 1);
-  jwObj_double(&jwc, "double", 1.234);
-  jwObj_null(&jwc, "nullThing");
-  jwObj_bool(&jwc, "bool", 1);
+  jw_key(&jwc, "key");
+  jw_string(&jwc, "value");
+  jw_key(&jwc, "int");
+  jw_int(&jwc, 1);
+  jw_key(&jwc, "double");
+  jw_double(&jwc, 1.234);
+  jw_key(&jwc, "nullThing");
+  jw_null(&jwc);
+  jw_key(&jwc, "bool");
+  jw_bool(&jwc, 1);
 
   err = jwClose(&jwc); /* close and get error code */
 
@@ -89,11 +99,11 @@ void basic_root_array() {
   jwOpen(&jwc, json, maxJsonLen, JW_ARRAY, JW_PRETTY);
 
   /* Add value of different types to array */
-  jwArr_string(&jwc, "value");
-  jwArr_int(&jwc, 1);
-  jwArr_double(&jwc, 1.234);
-  jwArr_null(&jwc);
-  jwArr_bool(&jwc, 1);
+  jw_string(&jwc, "value");
+  jw_int(&jwc, 1);
+  jw_double(&jwc, 1.234);
+  jw_null(&jwc);
+  jw_bool(&jwc, 1);
 
   err = jwClose(&jwc); /* close and get error code */
 
@@ -126,16 +136,18 @@ void array_in_object() {
   jwOpen(&jwc, json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add empty to object */
-  jwObj_array(&jwc, "array_empty"); /* Create and open array */
-  jwEnd(&jwc);                      /* Close array */
+  jw_key(&jwc, "array_empty");
+  jw_array(&jwc); /* Create and open array */
+  jwEnd(&jwc);    /* Close array */
 
   /* Create array and insert basic types */
-  jwObj_array(&jwc, "array_basic");
-  jwArr_string(&jwc, "value");
-  jwArr_int(&jwc, 1);
-  jwArr_double(&jwc, 1.234);
-  jwArr_null(&jwc);
-  jwArr_bool(&jwc, 1);
+  jw_key(&jwc, "array_basic");
+  jw_array(&jwc);
+  jw_string(&jwc, "value");
+  jw_int(&jwc, 1);
+  jw_double(&jwc, 1.234);
+  jw_null(&jwc);
+  jw_bool(&jwc, 1);
   jwEnd(&jwc);
 
   err = jwClose(&jwc); /* close and get error code */
@@ -169,16 +181,23 @@ void object_in_object() {
   jwOpen(&jwc, json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add empty to object */
-  jwObj_object(&jwc, "object_empty"); /* Create and open object */
-  jwEnd(&jwc);                        /* Close object */
+  jw_key(&jwc, "object_empty");
+  jw_object(&jwc); /* Create and open object */
+  jwEnd(&jwc);     /* Close object */
 
   /* Create object and insert basic types */
-  jwObj_object(&jwc, "object_basic");
-  jwObj_string(&jwc, "key", "value");
-  jwObj_int(&jwc, "int", 1);
-  jwObj_double(&jwc, "double", 1.234);
-  jwObj_null(&jwc, "nullThing");
-  jwObj_bool(&jwc, "bool", 1);
+  jw_key(&jwc, "object_basic");
+  jw_object(&jwc);
+  jw_key(&jwc, "key");
+  jw_string(&jwc, "value");
+  jw_key(&jwc, "int");
+  jw_int(&jwc, 1);
+  jw_key(&jwc, "double");
+  jw_double(&jwc, 1.234);
+  jw_key(&jwc, "nullThing");
+  jw_null(&jwc);
+  jw_key(&jwc, "bool");
+  jw_bool(&jwc, 1);
   jwEnd(&jwc);
 
   err = jwClose(&jwc); /* close and get error code */
@@ -227,33 +246,49 @@ void object_in_array() {
   jwOpen(&jwc, json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add array to hold objects */
-  jwObj_array(&jwc, "array_of_objects"); /* Create and open array */
+  jw_key(&jwc, "array_of_objects");
+  jw_array(&jwc); /* Create and open array */
 
   /* Add object 0 to array */
-  jwArr_object(&jwc); /* Create object in array */
-  jwObj_string(&jwc, "key", "value");
-  jwObj_int(&jwc, "int", 1);
-  jwObj_double(&jwc, "double", 1.234);
-  jwObj_null(&jwc, "nullThing");
-  jwObj_bool(&jwc, "bool", 1);
+  jw_object(&jwc); /* Create object in array */
+  jw_key(&jwc, "key");
+  jw_string(&jwc, "value");
+  jw_key(&jwc, "int");
+  jw_int(&jwc, 1);
+  jw_key(&jwc, "double");
+  jw_double(&jwc, 1.234);
+  jw_key(&jwc, "nullThing");
+  jw_null(&jwc);
+  jw_key(&jwc, "bool");
+  jw_bool(&jwc, 1);
   jwEnd(&jwc); /* Close object in array */
 
   /* Add object 1 to array */
-  jwArr_object(&jwc); /* Create object in array */
-  jwObj_string(&jwc, "key", "value");
-  jwObj_int(&jwc, "int", 1);
-  jwObj_double(&jwc, "double", 1.234);
-  jwObj_null(&jwc, "nullThing");
-  jwObj_bool(&jwc, "bool", 1);
+  jw_object(&jwc); /* Create object in array */
+  jw_key(&jwc, "key");
+  jw_string(&jwc, "value");
+  jw_key(&jwc, "int");
+  jw_int(&jwc, 1);
+  jw_key(&jwc, "double");
+  jw_double(&jwc, 1.234);
+  jw_key(&jwc, "nullThing");
+  jw_null(&jwc);
+  jw_key(&jwc, "bool");
+  jw_bool(&jwc, 1);
   jwEnd(&jwc); /* Close object in array */
 
   /* Add object 2 to array */
-  jwArr_object(&jwc); /* Create object in array */
-  jwObj_string(&jwc, "key", "value");
-  jwObj_int(&jwc, "int", 1);
-  jwObj_double(&jwc, "double", 1.234);
-  jwObj_null(&jwc, "nullThing");
-  jwObj_bool(&jwc, "bool", 1);
+  jw_object(&jwc); /* Create object in array */
+  jw_key(&jwc, "key");
+  jw_string(&jwc, "value");
+  jw_key(&jwc, "int");
+  jw_int(&jwc, 1);
+  jw_key(&jwc, "double");
+  jw_double(&jwc, 1.234);
+  jw_key(&jwc, "nullThing");
+  jw_null(&jwc);
+  jw_key(&jwc, "bool");
+  jw_bool(&jwc, 1);
   jwEnd(&jwc); /* Close object in array */
 
   jwEnd(&jwc); /* Close array */
@@ -303,33 +338,34 @@ void array_in_array() {
   jwOpen(&jwc, json, maxJsonLen, JW_OBJECT, JW_PRETTY);
 
   /* Add empty to object */
-  jwObj_array(&jwc, "array_of_arrays"); /* Create and open array */
+  jw_key(&jwc, "array_of_arrays");
+  jw_array(&jwc); /* Create and open array */
 
   /* Create array 0 and insert basic types */
-  jwArr_array(&jwc);
-  jwArr_string(&jwc, "value");
-  jwArr_int(&jwc, 1);
-  jwArr_double(&jwc, 1.234);
-  jwArr_null(&jwc);
-  jwArr_bool(&jwc, 1);
+  jw_array(&jwc);
+  jw_string(&jwc, "value");
+  jw_int(&jwc, 1);
+  jw_double(&jwc, 1.234);
+  jw_null(&jwc);
+  jw_bool(&jwc, 1);
   jwEnd(&jwc);
 
   /* Create array 1 and insert basic types */
-  jwArr_array(&jwc);
-  jwArr_string(&jwc, "value");
-  jwArr_int(&jwc, 1);
-  jwArr_double(&jwc, 1.234);
-  jwArr_null(&jwc);
-  jwArr_bool(&jwc, 1);
+  jw_array(&jwc);
+  jw_string(&jwc, "value");
+  jw_int(&jwc, 1);
+  jw_double(&jwc, 1.234);
+  jw_null(&jwc);
+  jw_bool(&jwc, 1);
   jwEnd(&jwc);
 
   /* Create array 2 and insert basic types */
-  jwArr_array(&jwc);
-  jwArr_string(&jwc, "value");
-  jwArr_int(&jwc, 1);
-  jwArr_double(&jwc, 1.234);
-  jwArr_null(&jwc);
-  jwArr_bool(&jwc, 1);
+  jw_array(&jwc);
+  jw_string(&jwc, "value");
+  jw_int(&jwc, 1);
+  jw_double(&jwc, 1.234);
+  jw_null(&jwc);
+  jw_bool(&jwc, 1);
   jwEnd(&jwc);
 
   jwEnd(&jwc);         /* Close array */
